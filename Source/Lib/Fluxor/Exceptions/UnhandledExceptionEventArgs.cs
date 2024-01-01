@@ -16,14 +16,19 @@ namespace Fluxor.Exceptions
 		/// The unhandled exception
 		/// </summary>
 		public Exception Exception { get; }
+		/// <summary>
+		/// The action that died
+		/// </summary>
+		public object Action { get; }
 
 		/// <summary>
 		/// Creates a new instance
 		/// </summary>
 		/// <param name="exception">The exception that was unhandled</param>
-		public UnhandledExceptionEventArgs(Exception exception)
+		public UnhandledExceptionEventArgs(Exception exception, object action)
 		{
 			Exception = exception ?? throw new ArgumentNullException(nameof(exception));
+			Action = action;
 		}
 
 		/// <summary>

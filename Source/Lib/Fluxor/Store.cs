@@ -232,7 +232,7 @@ namespace Fluxor
 				// Let the UI decide if it wishes to deal with any unhandled exceptions.
 				// By default it should throw the exception if it is not handled.
 				foreach (Exception exception in recordedExceptions)
-					UnhandledException?.Invoke(this, new Exceptions.UnhandledExceptionEventArgs(exception));
+					UnhandledException?.Invoke(this, new Exceptions.UnhandledExceptionEventArgs(exception, action));
 			});
 		}
 
