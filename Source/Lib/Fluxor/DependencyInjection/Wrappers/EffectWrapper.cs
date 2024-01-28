@@ -6,18 +6,19 @@ namespace Fluxor.DependencyInjection.Wrappers
 	internal class EffectWrapper<TAction> : IEffect
 	{
 		private delegate Task HandleWithActionParameterAsyncHandler(TAction action, IDispatcher dispatcher);
+		private delegate Task HandleWithActonParameterNoDispatcherAsyncHandler(TAction action);
 		private delegate Task HandleWithoutActionParameterAsyncHandler(IDispatcher dispatcher);
 		private readonly HandleWithActionParameterAsyncHandler HandleAsync;
 
 		Task IEffect.HandleAsync(object action, IDispatcher dispatcher) => HandleAsync((TAction)action, dispatcher);
 		bool IEffect.ShouldReactToAction(object action) => action is TAction;
 
-		public EffectWrapper(object effectHostInstance, EffectMethodInfo effectMethodInfos)
+		public EffectWrapper(object effectHostInstance, EffectMethodInfo effectMethodInfo)
 		{
 			HandleAsync =
-				effectMethodInfos.RequiresActionParameterInMethod
-				? CreateHandlerWithActionParameter(effectHostInstance, effectMethodInfos)
-				: WrapEffectWithoutActionParameter(effectHostInstance, effectMethodInfos); ;
+				effectMethodInfo.RequiresActionParameterInMethod
+				? CreateHandlerWithActionParameter(effectHostInstance, effectMethodInfo)
+				: WrapEffectWithoutActionParameter(effectHostInstance, effectMethodInfo);
 		}
 
 		private static HandleWithActionParameterAsyncHandler WrapEffectWithoutActionParameter(
@@ -31,13 +32,29 @@ namespace Fluxor.DependencyInjection.Wrappers
 			return new HandleWithActionParameterAsyncHandler((action, dispatcher) => handler.Invoke(dispatcher));
 		}
 
+		private static HandleWithActionParameterAsyncHandler WrapInstanceEffectWithoutDispatcherParameter(
+			object effectHostInstance,
+			EffectMethodInfo effectMethodInfo)
+		{
+			HandleWithActonParameterNoDispatcherAsyncHandler handler = CreateInstanceHandlerWithoutDispatcherParameter(
+				effectHostInstance,
+				effectMethodInfo);
+
+			return new HandleWithActionParameterAsyncHandler((action, dispatcher) => handler.Invoke(action));
+		}
+
 		private static HandleWithActionParameterAsyncHandler CreateHandlerWithActionParameter(
 			object effectHostInstance,
-			EffectMethodInfo effectMethodInfos)
-			=>
-				effectHostInstance is null
-				? CreateStaticHandlerWithActionParameter(effectMethodInfos)
-				: CreateInstanceHandlerWithActionParameter(effectHostInstance, effectMethodInfos);
+			EffectMethodInfo effectMethodInfo)
+		{
+			if (effectHostInstance is null)
+				return CreateStaticHandlerWithActionParameter(effectMethodInfo);
+			else if (effectMethodInfo.RequiresDispatcherParameterInMethod)
+				return CreateInstanceHandlerWithActionParameter(effectHostInstance, effectMethodInfo);
+			else
+				return WrapInstanceEffectWithoutDispatcherParameter(effectHostInstance, effectMethodInfo);
+		}
+
 
 		private static HandleWithActionParameterAsyncHandler CreateStaticHandlerWithActionParameter(
 			EffectMethodInfo effectMethodInfo)
@@ -80,6 +97,16 @@ namespace Fluxor.DependencyInjection.Wrappers
 				(HandleWithoutActionParameterAsyncHandler)
 					Delegate.CreateDelegate(
 						type: typeof(HandleWithoutActionParameterAsyncHandler),
+						firstArgument: effectHostInstance,
+						method: effectMethodInfo.MethodInfo);
+
+		private static HandleWithActonParameterNoDispatcherAsyncHandler CreateInstanceHandlerWithoutDispatcherParameter(
+			object effectHostInstance,
+			EffectMethodInfo effectMethodInfo)
+			=>
+				(HandleWithActonParameterNoDispatcherAsyncHandler)
+					Delegate.CreateDelegate(
+						type: typeof(HandleWithActonParameterNoDispatcherAsyncHandler),
 						firstArgument: effectHostInstance,
 						method: effectMethodInfo.MethodInfo);
 	}

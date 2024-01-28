@@ -8,7 +8,6 @@ namespace Fluxor.DependencyInjection.InfoFactories
 	internal static class EffectMethodInfoFactory
 	{
 		internal static EffectMethodInfo[] Create(
-			IServiceCollection services,
 			IEnumerable<TypeAndMethodInfo> allCandidateMethods)
 		=>
 			allCandidateMethods

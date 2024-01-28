@@ -11,6 +11,7 @@ namespace Fluxor.DependencyInjection
 		public readonly MethodInfo MethodInfo;
 		public readonly Type ActionType;
 		public readonly bool RequiresActionParameterInMethod;
+		public readonly bool RequiresDispatcherParameterInMethod;
 
 		public EffectMethodInfo(
 			Type hostClassType,
@@ -18,14 +19,21 @@ namespace Fluxor.DependencyInjection
 			MethodInfo methodInfo)
 		{
 			ParameterInfo[] methodParameters = methodInfo.GetParameters();
-			if (attribute.ActionType is null && methodParameters.Length != 2)
+
+			HostClassType = hostClassType;
+			MethodInfo = methodInfo;
+			ActionType = attribute.ActionType ?? methodParameters[0].ParameterType;
+			RequiresActionParameterInMethod = attribute.ActionType is null;
+			RequiresDispatcherParameterInMethod = methodParameters.Length > 1;
+
+			if (RequiresActionParameterInMethod && methodInfo.IsStatic && methodParameters.Length != 2)
 				throw new ArgumentException(
-					$"Method must have 2 parameters (action, IDispatcher)"
+					$"Static method must have 2 parameters (action, IDispatcher)"
 						+ $" when [{nameof(EffectMethodAttribute)}] has no {nameof(EffectMethodAttribute.ActionType)} specified. "
 						+ methodInfo.GetClassNameAndMethodName(),
 					nameof(MethodInfo));
 
-			if (attribute.ActionType is not null && methodParameters.Length != 1)
+			if (!RequiresActionParameterInMethod && methodParameters.Length != 1)
 				throw new ArgumentException(
 					$"Method must have 1 parameter (IDispatcher)"
 						+ $" when [{nameof(EffectMethodAttribute)}] has an {nameof(EffectMethodAttribute.ActionType)} specified. "
@@ -33,7 +41,7 @@ namespace Fluxor.DependencyInjection
 					nameof(methodInfo));
 
 			Type lastParameterType = methodParameters[methodParameters.Length - 1].ParameterType;
-			if (lastParameterType != typeof(IDispatcher))
+			if (RequiresDispatcherParameterInMethod && lastParameterType != typeof(IDispatcher))
 				throw new ArgumentException(
 					$"The last parameter of a method should be an {nameof(IDispatcher)}"
 						+ $" when decorated with an [{nameof(EffectMethodAttribute)}]. "
@@ -44,11 +52,6 @@ namespace Fluxor.DependencyInjection
 				throw new ArgumentException(
 					$"Effect methods must have a return type of {nameof(Task)}. " + methodInfo.GetClassNameAndMethodName(),
 					nameof(methodInfo));
-
-			HostClassType = hostClassType;
-			MethodInfo = methodInfo;
-			ActionType = attribute.ActionType ?? methodParameters[0].ParameterType;
-			RequiresActionParameterInMethod = attribute.ActionType is null;
 		}
 	}
 }
