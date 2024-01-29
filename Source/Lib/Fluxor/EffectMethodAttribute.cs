@@ -11,11 +11,15 @@ namespace Fluxor
 	///				({ActionType} action, IDispatcher dispatcher) => Task
 	///				or
 	///				({ActionType} action) => Task
+	///				or
+	///				({ActionType} action) => void
 	/// 
 	///		</para>
 	///		<para>
 	///			When an ActionType is specified <see cref="EffectMethodAttribute.EffectMethodAttribute(Type)"/> then the method signature must be
 	///				(IDispatcher dispatcher) => Task
+	///				or
+	///				(IDispatcher dispatcher) => void
 	///		</para>
 	///	</summary>
 	///	<example>
