@@ -21,70 +21,54 @@ namespace Fluxor.DependencyInjection.Wrappers
 
 		public EffectWrapper(object effectHostInstance, EffectMethodInfo effectMethodInfo)
 		{
-			HandleAsync =
-				effectMethodInfo.RequiresActionParameterInMethod
-				? CreateHandlerWithActionParameter(effectHostInstance, effectMethodInfo)
-				: WrapEffectWithoutActionParameter(effectHostInstance, effectMethodInfo);
+			HandleWithActionParameterAsyncHandler handler;
+
+			if (effectMethodInfo.RequiresActionParameterInMethod)
+			{
+				if (effectMethodInfo.RequiresDispatcherParameterInMethod)
+				{
+					if (effectMethodInfo.IsVoid)
+						handler = WrapVoidEffectWithActionAndDispatcherParameter(effectHostInstance, effectMethodInfo);
+					else
+						handler = CreateDelegate<HandleWithActionParameterAsyncHandler>(effectHostInstance, effectMethodInfo);
+				}
+				else
+				{
+					if (effectMethodInfo.IsVoid)
+						handler = WrapVoidEffectWithActionParameter(effectHostInstance, effectMethodInfo);
+					else
+						handler = WrapAsyncEffectWithActionParameter(effectHostInstance, effectMethodInfo);
+				}
+			}
+			else
+			{
+				if (effectMethodInfo.IsVoid)
+					handler = WrapVoidEffectWithDispatcherParameter(effectHostInstance, effectMethodInfo);
+				else
+					handler = WrapAsyncEffectWithDispatcherParameter(effectHostInstance, effectMethodInfo);
+			}
+
+			HandleAsync = handler;
 		}
 
-		private static HandleWithActionParameterAsyncHandler WrapEffectWithoutActionParameter(
-			object effectHostInstance,
-			EffectMethodInfo effectMethodInfo)
-			=> effectMethodInfo.IsVoid ?
-				WrapVoidEffectWithoutActionParameter(effectHostInstance, effectMethodInfo) :
-				WrapAsyncEffectWithoutActionParameter(effectHostInstance, effectMethodInfo);
-
-		private static HandleWithActionParameterAsyncHandler WrapVoidEffectWithoutActionParameter(
+		private static HandleWithActionParameterAsyncHandler WrapVoidEffectWithActionAndDispatcherParameter(
 			object effectHostInstance,
 			EffectMethodInfo effectMethodInfo)
 		{
-			HandleWithoutActionParameterVoidHandler handler = CreateVoidHandlerWithoutActionParameter(
-				effectHostInstance,
-				effectMethodInfo);
+			var handler = CreateDelegate<HandleWithActionParameterVoidHandler>(effectHostInstance, effectMethodInfo);
 
 			return new HandleWithActionParameterAsyncHandler((action, dispatcher) =>
 			{
-				handler.Invoke(dispatcher);
+				handler.Invoke(action, dispatcher);
 				return Task.CompletedTask;
 			});
 		}
 
-		private static HandleWithActionParameterAsyncHandler WrapAsyncEffectWithoutActionParameter(
+		private static HandleWithActionParameterAsyncHandler WrapVoidEffectWithActionParameter(
 			object effectHostInstance,
 			EffectMethodInfo effectMethodInfo)
 		{
-			HandleWithoutActionParameterAsyncHandler handler = CreateHandlerWithoutActionParameter(
-				effectHostInstance,
-				effectMethodInfo);
-
-			return new HandleWithActionParameterAsyncHandler((action, dispatcher) => handler.Invoke(dispatcher));
-		}
-
-		private static HandleWithActionParameterAsyncHandler WrapInstanceEffectWithoutDispatcherParameter(
-			object effectHostInstance,
-			EffectMethodInfo effectMethodInfo)
-			=> effectMethodInfo.IsVoid ?
-				WrapInstanceVoidEffectWithoutDispatcherParameter(effectHostInstance, effectMethodInfo) :
-				WrapInstanceAsyncEffectWithoutDispatcherParameter(effectHostInstance, effectMethodInfo);
-
-		private static HandleWithActionParameterAsyncHandler WrapInstanceAsyncEffectWithoutDispatcherParameter(
-			object effectHostInstance,
-			EffectMethodInfo effectMethodInfo)
-		{
-			HandleWithActonParameterNoDispatcherAsyncHandler handler = CreateInstanceHandlerWithoutDispatcherParameter(
-				effectHostInstance,
-				effectMethodInfo);
-
-			return new HandleWithActionParameterAsyncHandler((action, dispatcher) => handler.Invoke(action));
-		}
-
-		private static HandleWithActionParameterAsyncHandler WrapInstanceVoidEffectWithoutDispatcherParameter(
-			object effectHostInstance,
-			EffectMethodInfo effectMethodInfo)
-		{
-			HandleWithActionParameterNoDispatcherVoidHandler handler = CreateInstanceVoidHandlerWithoutDispatcherParameter(
-				effectHostInstance,
-				effectMethodInfo);
+			var handler = CreateDelegate<HandleWithActionParameterNoDispatcherVoidHandler>(effectHostInstance, effectMethodInfo);
 
 			return new HandleWithActionParameterAsyncHandler((action, dispatcher) =>
 			{
@@ -93,161 +77,40 @@ namespace Fluxor.DependencyInjection.Wrappers
 			});
 		}
 
-		private static HandleWithActionParameterAsyncHandler WrapStaticVoidEffectWithActionParameter(
+		private static HandleWithActionParameterAsyncHandler WrapVoidEffectWithDispatcherParameter(
+			object effectHostInstance,
 			EffectMethodInfo effectMethodInfo)
 		{
-			HandleWithActionParameterVoidHandler handler = CreateStaticVoidHandlerWithActionParameter(effectMethodInfo);
+			var handler = CreateDelegate<HandleWithoutActionParameterVoidHandler>(effectHostInstance, effectMethodInfo);
 
 			return new HandleWithActionParameterAsyncHandler((action, dispatcher) =>
 			{
-				handler.Invoke(action, dispatcher);
+				handler.Invoke(dispatcher);
 				return Task.CompletedTask;
 			});
 		}
-
-		private static HandleWithActionParameterAsyncHandler WrapInstanceVoidEffectWithActionParameter(
+		
+		private static HandleWithActionParameterAsyncHandler WrapAsyncEffectWithActionParameter(
 			object effectHostInstance,
 			EffectMethodInfo effectMethodInfo)
 		{
-			HandleWithActionParameterVoidHandler handler = CreateInstanceVoidHandler(effectHostInstance, effectMethodInfo);
-
-			return new HandleWithActionParameterAsyncHandler((action, dispatcher) =>
-			{
-				handler.Invoke(action, dispatcher);
-				return Task.CompletedTask;
-			});
+			var handler = CreateDelegate<HandleWithActonParameterNoDispatcherAsyncHandler>(effectHostInstance, effectMethodInfo);
+			return new HandleWithActionParameterAsyncHandler((action, dispatcher) => handler.Invoke(action));
 		}
 
-		private static HandleWithActionParameterAsyncHandler CreateHandlerWithActionParameter(
+		private static HandleWithActionParameterAsyncHandler WrapAsyncEffectWithDispatcherParameter(
 			object effectHostInstance,
 			EffectMethodInfo effectMethodInfo)
 		{
-			if (effectHostInstance is null)
-				return CreateStaticHandlerWithActionParameter(effectMethodInfo);
-			else if (effectMethodInfo.RequiresDispatcherParameterInMethod)
-				return CreateInstanceHandlerWithActionParameter(effectHostInstance, effectMethodInfo);
-			else
-				return WrapInstanceEffectWithoutDispatcherParameter(effectHostInstance, effectMethodInfo);
+			var handler = CreateDelegate<HandleWithoutActionParameterAsyncHandler>(effectHostInstance, effectMethodInfo);
+			return new HandleWithActionParameterAsyncHandler((action, dispatcher) => handler.Invoke(dispatcher));
 		}
 
-		private static HandleWithActionParameterAsyncHandler CreateStaticHandlerWithActionParameter(
-			EffectMethodInfo effectMethodInfo)
-			=> effectMethodInfo.IsVoid ?
-				WrapStaticVoidEffectWithActionParameter(effectMethodInfo) :
-				CreateStaticAsyncHandlerWithActionParameter(effectMethodInfo);
-
-		private static HandleWithActionParameterAsyncHandler CreateStaticAsyncHandlerWithActionParameter(
-			EffectMethodInfo effectMethodInfo)
-			=>
-				(HandleWithActionParameterAsyncHandler)
-					Delegate.CreateDelegate(
-						type: typeof(HandleWithActionParameterAsyncHandler),
-						method: effectMethodInfo.MethodInfo);
-
-		private static HandleWithActionParameterAsyncHandler CreateInstanceHandlerWithActionParameter(
-			object effectHostInstance,
-			EffectMethodInfo effectMethodInfo)
-			=> effectMethodInfo.IsVoid ?
-				WrapInstanceVoidEffectWithActionParameter(effectHostInstance, effectMethodInfo) :
-				CreateInstanceAsyncHandlerWithActionParameter(effectHostInstance, effectMethodInfo);
-
-		private static HandleWithActionParameterAsyncHandler CreateInstanceAsyncHandlerWithActionParameter(
-			object effectHostInstance,
-			EffectMethodInfo effectMethodInfo)
-			=>
-				(HandleWithActionParameterAsyncHandler)
-					Delegate.CreateDelegate(
-						type: typeof(HandleWithActionParameterAsyncHandler),
-						firstArgument: effectHostInstance,
-						method: effectMethodInfo.MethodInfo);
-
-		private static HandleWithoutActionParameterAsyncHandler CreateHandlerWithoutActionParameter(
-			object effectHostInstance,
-			EffectMethodInfo effectMethodInfo)
-			=>
-				effectHostInstance is null
-				? CreateStaticHandlerWithoutActionParameter(effectMethodInfo)
-				: CreateInstanceHandlerWithoutActionParameter(effectHostInstance, effectMethodInfo);
-
-		private static HandleWithoutActionParameterVoidHandler CreateVoidHandlerWithoutActionParameter(
-			object effectHostInstance,
-			EffectMethodInfo effectMethodInfo)
-			=>
-				effectHostInstance is null
-				? CreateStaticVoidHandlerWithoutActionParameter(effectMethodInfo)
-				: CreateInstanceVoidHandlerWithoutActionParameter(effectHostInstance, effectMethodInfo);
-
-		private static HandleWithoutActionParameterAsyncHandler CreateStaticHandlerWithoutActionParameter(
-			EffectMethodInfo effectMethodInfo)
-			=>
-				(HandleWithoutActionParameterAsyncHandler)
-					Delegate.CreateDelegate(
-						type: typeof(HandleWithoutActionParameterAsyncHandler),
-						method: effectMethodInfo.MethodInfo);
-
-		private static HandleWithoutActionParameterVoidHandler CreateStaticVoidHandlerWithoutActionParameter(
-			EffectMethodInfo effectMethodInfo)
-			=>
-				(HandleWithoutActionParameterVoidHandler)
-					Delegate.CreateDelegate(
-						type: typeof(HandleWithoutActionParameterVoidHandler),
-						method: effectMethodInfo.MethodInfo);
-
-		private static HandleWithActionParameterVoidHandler CreateStaticVoidHandlerWithActionParameter(
-			EffectMethodInfo effectMethodInfo)
-			=>
-				(HandleWithActionParameterVoidHandler)
-					Delegate.CreateDelegate(
-						type: typeof(HandleWithActionParameterVoidHandler),
-						method: effectMethodInfo.MethodInfo);
-
-		private static HandleWithoutActionParameterAsyncHandler CreateInstanceHandlerWithoutActionParameter(
-			object effectHostInstance,
-			EffectMethodInfo effectMethodInfo)
-			=>
-				(HandleWithoutActionParameterAsyncHandler)
-					Delegate.CreateDelegate(
-						type: typeof(HandleWithoutActionParameterAsyncHandler),
-						firstArgument: effectHostInstance,
-						method: effectMethodInfo.MethodInfo);
-
-		private static HandleWithoutActionParameterVoidHandler CreateInstanceVoidHandlerWithoutActionParameter(
-			object effectHostInstance,
-			EffectMethodInfo effectMethodInfo)
-			=>
-				(HandleWithoutActionParameterVoidHandler)
-					Delegate.CreateDelegate(
-						type: typeof(HandleWithoutActionParameterVoidHandler),
-						firstArgument: effectHostInstance,
-						method: effectMethodInfo.MethodInfo);
-
-		private static HandleWithActonParameterNoDispatcherAsyncHandler CreateInstanceHandlerWithoutDispatcherParameter(
-			object effectHostInstance,
-			EffectMethodInfo effectMethodInfo)
-			=>
-				(HandleWithActonParameterNoDispatcherAsyncHandler)
-					Delegate.CreateDelegate(
-						type: typeof(HandleWithActonParameterNoDispatcherAsyncHandler),
-						firstArgument: effectHostInstance,
-						method: effectMethodInfo.MethodInfo);
-
-		private static HandleWithActionParameterVoidHandler CreateInstanceVoidHandler(
-			object effectHostInstance,
-			EffectMethodInfo effectMethodInfo)
-			=>
-				(HandleWithActionParameterVoidHandler)
-					Delegate.CreateDelegate(
-						type: typeof(HandleWithActionParameterVoidHandler),
-						firstArgument: effectHostInstance,
-						method: effectMethodInfo.MethodInfo);
-
-		private static HandleWithActionParameterNoDispatcherVoidHandler CreateInstanceVoidHandlerWithoutDispatcherParameter(
-			object effectHostInstance,
-			EffectMethodInfo effectMethodInfo)
-			=>
-				(HandleWithActionParameterNoDispatcherVoidHandler)
-					Delegate.CreateDelegate(
-						type: typeof(HandleWithActionParameterNoDispatcherVoidHandler),
+		private static DelegateType CreateDelegate<DelegateType>(
+			object effectHostInstance, 
+			EffectMethodInfo effectMethodInfo) where DelegateType : Delegate
+			=> (DelegateType)Delegate.CreateDelegate(
+						type: typeof(DelegateType),
 						firstArgument: effectHostInstance,
 						method: effectMethodInfo.MethodInfo);
 	}
