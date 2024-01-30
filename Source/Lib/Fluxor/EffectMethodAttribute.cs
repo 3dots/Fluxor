@@ -7,12 +7,19 @@ namespace Fluxor
 	///		alternative to using <see cref="IEffect"/> or <see cref="Effect{TTriggerAction}"/> and
 	///		will be discovered when using <see cref="DependencyInjection.Options.UseDependencyInjection(System.Reflection.Assembly[])"/>.
 	///		<para>
-	///			When no ActionType is specified <see cref="EffectMethodAttribute.EffectMethodAttribute()"/> then the method signature must be
+	///			When no ActionType is specified <see cref="EffectMethodAttribute.EffectMethodAttribute()"/> then the method signature can be
 	///				({ActionType} action, IDispatcher dispatcher) => Task
+	///				or
+	///				({ActionType} action) => Task
+	///				or
+	///				({ActionType} action) => void
+	/// 
 	///		</para>
 	///		<para>
 	///			When an ActionType is specified <see cref="EffectMethodAttribute.EffectMethodAttribute(Type)"/> then the method signature must be
 	///				(IDispatcher dispatcher) => Task
+	///				or
+	///				(IDispatcher dispatcher) => void
 	///		</para>
 	///	</summary>
 	///	<example>

@@ -49,7 +49,7 @@ namespace Fluxor.DependencyInjection
 
 			// Find all [EffectMethod] decorated methods
 			EffectMethodInfo[] effectMethodInfos =
-				EffectMethodInfoFactory.Create(services, allCandidateMethods);
+				EffectMethodInfoFactory.Create(allCandidateMethods);
 
 			// Find all concrete implementors of IFeature
 			FeatureClassInfo[] featureClassInfos =
